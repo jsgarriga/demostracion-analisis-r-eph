@@ -1,0 +1,216 @@
+---
+title: 'Taller III: Uso de R para analizar los datos de la Encuesta Permanente de Hogares (INDEC, Argentina)'
+subtitle: 'Demostración para el Taller introductorio a la Ciencia de Datos con R: Visualización de datos con ggplot2'
+author:
+  - name: Jess Garriga
+date: "09/03/2023"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    code-fold: false
+    code-summary: Mostrar código
+    code-tools: true
+    code-link: true
+    self-contained: true
+execute:
+  enabled: true
+---
+
+## Puesta a punto
+
+```{r}
+# Cargamos las librerías y scripts a utilizar
+library(tidyverse)
+library(eph)
+library(questionr)
+
+# Cargamos los microdatos de la EPH para el año 2019, tercer trimestre, encuesta de tipo individual
+b_eph_ind <- get_microdata(year = 2019, trimester = 3, type = "individual")
+```
+
+### Repaso
+
+El objetivo general de la EPH es el análisis de la inserción de la población en la estructura económico-social. 
+
+Sobre las variables utilizadas en los datos:
+
+- Condición de actividad = ESTADO
+- Sexo = CH04
+- Edad = CH06
+- Factor de ponderación = PONDERA
+
+_CAT_OCUP_:
+
+- 1 = Patrón
+- 2 = Cuenta propia
+- 3 = Obrero o empleado
+- 4 = Trabajador familiar sin remuneración
+- 9 = Ns./Nr
+
+## Taller III: Visualización de datos con ggplot2
+
+### Práctica
+
+- Importar la base eph
+- El siguiente código debería realizar un histograma. Para ello hace falta completar aquellos espacios con __ y ejecutarlo:
+
+```{}
+ggplot(data = ______, 
+       mapping = aes(x = CH06)) ______ 
+  geom______ (fill = ______,
+                 colour = "black",
+                 alpha = 0.5)
+```
+
+- Replicar el código anterior y modificar los valores de los atributos a gusto
+
+```{r}
+ggplot(data = b_eph_ind, 
+       mapping = aes(x = CH06)) + 
+  geom_histogram(fill = "blue",
+                 colour = "black",
+                 alpha = 0.5)
+```
+
+- Dado el siguiente código que devuelve la cantidad de casos muestrales para los aglomerados seleccionados, responder visualmente a la pregunta: ¿Cuál es el aglomerado que registra más casos en la muestra?
+
+```{r}
+# propuesta curso
+tabla_aglomerado <- b_eph_ind %>% 
+  filter(AGLOMERADO %in% c(32, 33, 2)) %>% 
+  count(AGLOMERADO)
+
+# propuesta jess
+tabla_aglomerado <- b_eph_ind %>% 
+  filter(AGLOMERADO %in% c(32, 33, 2)) %>% 
+  mutate(AGLOMERADO = case_when(AGLOMERADO == 2 ~ "Gran La Plata",
+                          AGLOMERADO == 32 ~ "CABA",
+                          AGLOMERADO == 33 ~ "Partidos del GBA"),
+         sexo = case_when(CH04 == 1 ~ "Varón",
+                          CH04 == 2 ~ "Mujer")) %>%
+  mutate(AGLOMERADO = factor(AGLOMERADO, 
+                       levels = c("Gran La Plata", 
+                                  "CABA", 
+                                  "Partidos del GBA"))) %>%
+  count(AGLOMERADO, sexo)
+```
+
+```{r}
+# Visualización de la tabla
+tabla_aglomerado
+```
+
+- Hacer un gráfico de barras que muestre la cantidad de casos muestrales por aglomerado
+- Agregarle color a las barras en base a la variable AGLOMERADO
+- Agregarle los textos de: Titulo, Ejes x e y, Leyenda.
+
+```{r}
+# propuesta...
+ggplot(tabla_aglomerado, aes(x = factor(AGLOMERADO), y = n, fill = factor(AGLOMERADO))) +
+  geom_col() +
+  labs(title = "Cantidad de casos muestrales por aglomerado",
+       x = "Aglomerado",
+       y = "Cantidad de casos") +
+  scale_fill_discrete(name = "Aglomerado")
+```
+
+```{r}
+# propuesta jess según curso
+ggplot(data = tabla_aglomerado,
+       mapping = aes(x = factor(AGLOMERADO), y = n)) +
+  geom_col(aes(fill = factor(AGLOMERADO))) + 
+  labs(title = "Casos muestrales por aglomerados",
+       x = "Aglomerados",
+       y = "Casos",
+       fill = "Aglomerados")
+
+# otra más según jess
+#ggplot(data = tabla_aglomerado, # cargo los datos
+#       mapping = aes(x = AGLOMERADO, y = n)) + # defino las variables
+#  geom_col(aes(fill = aglo)) +  # gráfico de barras, relleno según los valores de la variable
+#  labs(title = "Casos muestrales por aglomerados",
+#       x = "Aglomerados",
+#       y = "Casos",
+#       fill = "Aglomerados")
+
+# una última achicando código basándome en la propuesta anterior
+#ggplot(tabla_aglomerado, 
+#       aes(x = AGLOMERADO, y = n, fill = aglo, label = n, vjust = 1.5)) +
+#  geom_col() +
+#  facet_wrap(facets = "sexo") +
+#  geom_text() +
+#  labs(title = "Casos muestrales por aglomerados",
+#       x = "Aglomerados",
+#       y = "Casos",
+#       fill = "Aglomerados") +
+#  theme(axis.text.x = element_text(angle = 25, hjust = 1))
+```
+
+- Identificar el error en la siguiente sentencia, corregirlo y correr el gráfico:
+
+```{}
+tabla_ejercicio <- base_eph %>% 
+  filter(AGLOMERADO %in% c(36, 9, 17)) %>% 
+  count(AGLOMERADO, CH04)
+
+ggplot(data = provincia,
+       mapping = aes(x = tabla_ejercicio,
+                     y = n)) +
+  geom_col(aes(fill = AGLOMERADO)) +
+  theme_minimal() +
+  facet_wrap(facets = "CH04") +
+  geom_text(aes(label = n),
+            vjust = -0.25)
+```
+
+```{r}
+tabla_ejercicio <- b_eph_ind %>% 
+  filter(AGLOMERADO %in% c(36, 9, 17)) %>% 
+  count(AGLOMERADO, CH04)
+
+ggplot(data = tabla_ejercicio,
+       mapping = aes(x = factor(AGLOMERADO), y = n)) +
+  geom_col(aes(fill = factor(AGLOMERADO))) +
+  theme_minimal() +
+  facet_wrap(facets = "CH04") +
+  geom_text(aes(label = n),
+            vjust = -0.25)
+```
+
+- Identificar el error en la siguiente sentencia, corregirlo y correr el gráfico:
+
+```{}
+tabla_ejercicio_2 <- base_eph %>% 
+  filter(AGLOMERADO %in% c(36, 9, 17)) %>% 
+  count(AGLOMERADO, ESTADO) %>% 
+  group_by(AGLOMERADO) %>% 
+  mutate(peso = round(n / sum(n) * 100, digits = 2))
+ggplot(data = tabla_ejercicio_2,
+       mapping = aes(h = ESTADO,
+                     y = peso)) +
+  geom_col(aes(relleno = ESTADO)) +
+  facet_wrap(facets = "provincia") +
+  geom_text(aes(label = peso),
+            vjust = -0.25) +
+  theme_minimal()
+```
+
+```{r}
+tabla_ejercicio_2 <- b_eph_ind %>% 
+  filter(AGLOMERADO %in% c(36, 9, 17)) %>% 
+  count(AGLOMERADO, ESTADO) %>% 
+  group_by(AGLOMERADO) %>% 
+  mutate(peso = round(n / sum(n) * 100, digits = 2))
+
+ggplot(data = tabla_ejercicio_2,
+       mapping = aes(x = factor(ESTADO),
+                     y = peso)) +
+  geom_col(aes(fill = factor(ESTADO))) +
+  facet_wrap(facets = "AGLOMERADO") +
+  geom_text(aes(label = peso),
+            vjust = -0.25) +
+  theme_minimal()
+```

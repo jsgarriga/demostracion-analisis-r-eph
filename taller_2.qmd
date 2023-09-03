@@ -1,0 +1,322 @@
+---
+title: 'Taller II: Uso de R para analizar los datos de la Encuesta Permanente de Hogares (INDEC, Argentina)'
+subtitle: 'Demostración para el Taller introductorio a la Ciencia de Datos con R: Manipulación de datos utilizando el ecosistema Tidyverse'
+author:
+  - name: Jess Garriga
+date: "09/03/2023"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    code-fold: false
+    code-summary: Mostrar código
+    code-tools: true
+    code-link: true
+    self-contained: true
+execute:
+  enabled: true
+---
+
+## Puesta a punto
+
+```{r}
+# Cargamos las librerías y scripts a utilizar
+library(tidyverse)
+library(eph)
+library(questionr)
+
+# Cargamos los microdatos de la EPH para el año 2019, tercer trimestre, encuesta de tipo individual
+b_eph_ind <- get_microdata(year = 2019, trimester = 3, type = "individual")
+```
+
+* **EXTRA**: para "traducir" nuestras consultas de dplyr a SQL
+
+```{r}
+library(dbplyr)
+library(DBI)
+```
+
+## Taller II: Manipulación de datos utilizando el ecosistema Tidyverse
+
+### Práctica 2
+
+```{r}
+# Cargamos los microdatos de la EPH para el año 2019, tercer trimestre, encuesta de tipo individual
+b_eph_ind <- get_microdata(year = 2019, trimester = 3, type = "individual")
+
+# Obtener la distribución relativa de casos por sexo
+b_eph_ind$CH04 %>%
+  table() %>%
+  prop.table()
+
+# Condición de actividad = ESTADO
+# Sexo = CH04
+# Edad = CH06
+# Factor de ponderación = PONDERA
+
+# De los datos anteriores, tomamos "ESTADO, CH04, CH06, PONDERA"
+b_eph_ind_seleccion <- b_eph_ind %>%
+  select(ESTADO, CH04, CH06, PONDERA)
+
+# Vemos los nombres de las columnas
+colnames(b_eph_ind_seleccion)
+
+# Visualizamos la dimensión del subconjunto de datos
+dim(b_eph_ind_seleccion)
+```
+
+```{r}
+# Otro ejemplo de la función "select" de dplyr
+b_eph_ind %>%
+  select(starts_with("CH") & ends_with("COD"))
+```
+
+- Crear un objeto en donde importamos la base de datos de la EPH (recordar tener en cuenta la extensión del archivo)
+- Crear otro objeto en donde selecciono 3 columnas de interés según sus nombres
+- Crear otro objeto en donde selecciono 3 columnas de interés según su posición
+- Escribir el siguiente código en el esquema "paso a paso (con pipes)"
+
+```{r}
+base_ejercicio <- select(b_eph_ind, ESTADO, CH04, CAT_OCUP)
+```
+
+```{r}
+base_ejercicio <- read_delim(file = './datos/usu_individual_T122.txt.txt',
+                             delim = ';',
+                             col_names = TRUE)
+
+base_ejercicio_muestra_1 <- base_ejercicio %>%
+  select(ESTADO, CH04, CAT_OCUP)
+
+dim(base_ejercicio_muestra_1)
+
+head(base_ejercicio_muestra_1)
+
+base_ejercicio_muestra_2 <- base_ejercicio %>%
+  select(9:11)
+
+dim(base_ejercicio_muestra_2)
+
+head(base_ejercicio_muestra_2)
+```
+
+- A partir de la base de la EPH, crear un objeto nuevo que contenga las variables AGLOMERADO y CH06 y filtar por aquella población que tenga 18 o más años de edad y que resida en los aglomerados de Neuquén o Río Negro
+- Chequear que las operaciones hayan sido un éxito (pista: funciones como unique(), table() o colnames() pueden ser de ayuda)
+
+
+```{r}
+patagonia <- b_eph_ind %>% # creo un objeto llamado Patagonia con los datos de b_eph_ind
+  select(AGLOMERADO, CH06) %>% # tomo de la tabla solamente las variables aglomerado y edad (CH06)
+  filter(AGLOMERADO == 17 | AGLOMERADO == 93) %>% # Filtro Neuquén o Río Negro 
+  filter(CH06 >= 18) # Filtro las personas con 18 o más años
+
+summary(patagonia) # visualizo un resumen estadístico
+
+hist(patagonia$CH06, col = 'green', breaks = 20, main = "Histograma de mayores de 18, \n Neuquén y Río Negro", xlab = "Edad", ylab = "Frecuencia") # creo un histograma con los datos de Patagonia
+```
+
+- Crear una variable nueva con las etiquetas correspondientes a los valores de CAT_OCUP:
+```{}
+1 --> Patrón
+2 --> Cuenta propia
+3 --> Obrero o empleado
+4 --> Trabajador familiar sin remuneración
+9 --> Ns./Nr.
+```
+
+- Recodificar la variable de ingresos P21 en 5 rangos.
+
+```{r}
+b_eph_ind_ocu <- b_eph_ind %>%
+  select(CAT_OCUP) %>%
+  filter (CAT_OCUP > 0) %>% # 0 no forma parte de ninguna categoría ocupacional
+  mutate(cate_ocu = case_when(CAT_OCUP == 1 ~ "Patrón",
+                               CAT_OCUP == 2 ~ "Cuenta propia",
+                               CAT_OCUP == 3 ~ "Obrero o empleado",
+                               CAT_OCUP == 4 ~ "Trabajador familiar sin remuneración",
+                               CAT_OCUP == 9 ~ "Ns./Nr."))
+
+unique(b_eph_ind_ocu)
+
+b_eph_ind_ingresos <- b_eph_ind %>%
+  select(P21) %>%
+  filter(P21 > 0) %>%
+  mutate(rango_ingresos = case_when(P21 %in% c(1000:10000) ~ "De $1.000 a $10.000",
+                                    P21 %in% c(11000:20000) ~ "De $11.000 a $20.000",
+                                    P21 %in% c(21000:30000) ~ "De $21.000 a $30.000",
+                                    P21 %in% c(31000:40000) ~ "De $31.000 a $40.000",
+                                    P21 > 41000 ~ "Más de $41.000"))
+
+view(b_eph_ind_ingresos)
+
+```
+
+Según <https://www.indec.gob.ar/ftp/cuadros/menusuperior/eph/EPH_registro_1T2022.pdf>:
+
+> El campo "PONDERA" se trata de un peso muestral que se utiliza para ajustar los resultados de la Encuesta Permanente de Hogares (EPH) a la población total del país. Este peso se calcula a partir del número de hogares y personas en cada estrato geográfico y socioeconómico para garantizar que los datos recolectados sean representativos y precisos. "PONDERA" se expresa en miles de personas, lo que indica cuántas personas están representadas por cada registro de la EPH. El peso muestral se aplica a todas las variables de la encuesta para producir estimaciones precisas de las condiciones socioeconómicas y demográficas de la población argentina.
+
+Entonces...
+
+- Tomar los datos de individuos de la EPH del 3er trimestre del 2019.
+- Seleccionar las variables de: AGLOMERADOS, SEXO, EDAD, ESTADO (CONDICIÓN DE ACTIVIDAD), Monto de ingreso de la ocupación principal y la ponderación (peso muestral que se utiliza para ajustar los resultados).
+- Crear nuevas variables para edad en 6 rangos y sexo en dos categorías.
+- Filtrar los aglomerados de CABA y partidos de GBA
+- Agrupar por sexo y rangos de edad
+- Resumir la población total, la cantidad de ocupades, ingresos mínimo y máximo de ocupación principal y la media ponderada de ingresos de la ocupación principal
+
+```{r}
+# probando convertir ingresos menores o iguales a 0 a NA: if_na, if_else...
+
+b_eph_ind %>%
+  select(AGLOMERADO, CH04, CH06, ESTADO, P21, PONDERA) %>%
+  #mutate(x = na_if(P21, c(0, .<0))) %>% # acá traté de convertir a NA valores 0 y <, pero nel
+  mutate(rangos_edad = case_when(CH06 %in% c(0:18) ~ "0 a 18 años",
+                                 CH06 %in% c(19:29) ~ "19 a 29 años",
+                                 CH06 %in% c(30:39) ~ "30 a 29 años",
+                                 CH06 %in% c(40:49) ~ "40 a 49 años",
+                                 CH06 %in% c(50:59) ~ "50 a 59 años",
+                                 CH06 > 60 ~ "60 años o más"),
+         sexo = case_when(CH04 == 1 ~ "Varón",
+                          CH04 == 2 ~ "Mujer")) %>%
+  filter(AGLOMERADO %in% c(32,33)) %>% # acá había incluido "P21 > 0", pero eso descarta a la población no activa, por eso en líneas anteriores probé convertir valores negativos y cero a NA
+  group_by(sexo, rangos_edad) %>%
+  summarise(cant_pob_total = sum(PONDERA),
+            cant_ocupades = sum(PONDERA[ESTADO == 1]),
+            min_ing_ocu_princ = min(P21),
+            max_ing_ocu_princ = max(P21),
+            med_ing_ocu_princ = wtd.mean(x = P21, weights = PONDERA)) #%>%
+  #pivot_longer(cols = c(cant_ocupades, med_ing_ocu_princ),
+               #names_to = "Variable",
+               #values_to = "Valor")
+```
+
+#### Un poco de depuración...
+
+1. El error se produce porque en la función `wtd.mean()` se utiliza `weights(PONDERA)` en lugar de `weights = PONDERA`.
+1. El error se produce porque se está intentando reciclar el vector c(0, .<0) de tamaño 2 a un vector de tamaño 343375 (que es el tamaño de P21). Para solucionarlo, se debe utilizar la función if_else en lugar de na_if para convertir los valores deseados a NA.
+
+### EXTRA: Probando traducir a SQL
+
+```{r}
+# probando traducir a sql
+# Conexión a la base de datos
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+
+# Cargar los datos en una tabla de base de datos
+dbWriteTable(con, "b_eph_ind", b_eph_ind)
+
+# Consulta SQL equivalente
+query <- tbl(con, "b_eph_ind") %>%
+  select(AGLOMERADO, CH04, CH06, ESTADO, P21, PONDERA) %>%
+  mutate(rangos_edad = case_when(CH06 %in% c(0:18) ~ '0 a 18 años',
+                                 CH06 %in% c(19:29) ~ '19 a 29 años',
+                                 CH06 %in% c(30:39) ~ '30 a 39 años',
+                                 CH06 %in% c(40:49) ~ '40 a 49 años',
+                                 CH06 %in% c(50:59) ~ '50 a 59 años',
+                                 CH06 > 60 ~ '60 años o más'),
+         sexo = case_when(CH04 == 1 ~ 'Varón',
+                          CH04 == 2 ~ 'Mujer')) %>%
+  filter(AGLOMERADO %in% c(32, 33)) %>%
+  group_by(sexo, rangos_edad) %>%
+  summarise(cant_pob_total = sum(PONDERA),
+            cant_ocupades = sum(PONDERA[ESTADO == 1]),
+            min_ing_ocu_princ = min(P21),
+            max_ing_ocu_princ = max(P21),
+            med_ing_ocu_princ = sum(P21 * PONDERA) / sum(PONDERA),
+            .groups = 'drop')  # Evita el mensaje de advertencia y elimina la agrupación
+
+# Mostrar la consulta equivalente en SQLite
+show_query(query)
+
+# Ejecutar la consulta SQL
+sql_query <- sql_render(query)
+result <- dbGetQuery(con, sql_query)
+
+# Cerrar la conexión a la base de datos
+dbDisconnect(con)
+```
+
+#### Ejemplo de salida correctamente formateado y comentado en SQL
+
+```{}
+/* Selecciona las columnas 'sexo', 'rangos_edad' y calcula la suma de 'PONDERA' como 'cant_pob_total'
+También calcula la suma de 'PONDERA' cuando 'ESTADO' es igual a 1 y lo nombra 'cant_ocupades'
+Obtiene el valor mínimo de 'P21' como 'min_ing_ocu_princ'
+Obtiene el valor máximo de 'P21' como 'max_ing_ocu_princ'
+Calcula la mediana de 'P21' ponderada por 'PONDERA' y la llama 'med_ing_ocu_princ' */
+SELECT 
+  `sexo`, 
+  `rangos_edad`, 
+  SUM(`PONDERA`) AS `cant_pob_total`, 
+  SUM(
+    CASE WHEN (`ESTADO` = 1.0) THEN (`PONDERA`) END
+  ) AS `cant_ocupades`, 
+  MIN(`P21`) AS `min_ing_ocu_princ`, 
+  MAX(`P21`) AS `max_ing_ocu_princ`, 
+  SUM(`P21` * `PONDERA`) / SUM(`PONDERA`) AS `med_ing_ocu_princ` 
+FROM 
+  (
+    SELECT 
+      `AGLOMERADO`, 
+      `CH04`, 
+      `CH06`, 
+      `ESTADO`, 
+      `P21`, 
+      `PONDERA`, 
+      CASE WHEN (
+        `CH06` IN (
+          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 
+          14, 15, 16, 17, 18
+        )
+      ) THEN '0 a 18 años' WHEN (
+        `CH06` IN (
+          19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29
+        )
+      ) THEN '19 a 29 años' WHEN (
+        `CH06` IN (30, 31, 32, 33, 34, 35, 36, 37, 38, 39)
+      ) THEN '30 a 39 años' WHEN (
+        `CH06` IN (40, 41, 42, 43, 44, 45, 46, 47, 48, 49)
+      ) THEN '40 a 49 años' WHEN (
+        `CH06` IN (50, 51, 52, 53, 54, 55, 56, 57, 58, 59)
+      ) THEN '50 a 59 años' WHEN (`CH06` > 60.0) THEN '60 años o más' END AS `rangos_edad`, 
+      CASE WHEN (`CH04` = 1.0) THEN 'Varón' WHEN (`CH04` = 2.0) THEN 'Mujer' END AS `sexo` 
+    FROM 
+      `b_eph_ind` 
+    WHERE 
+      (
+        `AGLOMERADO` IN (32.0, 33.0)
+      )
+  ) 
+GROUP BY 
+  `sexo`, 
+  `rangos_edad`
+```
+
+#### Ejemplo de salida de `show_query(query)` mejorado
+
+```{}
+-- Consulta legible, sin subconsulta interna. nombres de columnas calculadas más descriptivos
+SELECT 
+  CASE WHEN (CH04 = 1.0) THEN 'Varón' WHEN (CH04 = 2.0) THEN 'Mujer' END AS sexo,
+  CASE WHEN (CH06 BETWEEN 0 AND 18) THEN '0 a 18 años'
+       WHEN (CH06 BETWEEN 19 AND 29) THEN '19 a 29 años'
+       WHEN (CH06 BETWEEN 30 AND 39) THEN '30 a 39 años'
+       WHEN (CH06 BETWEEN 40 AND 49) THEN '40 a 49 años'
+       WHEN (CH06 BETWEEN 50 AND 59) THEN '50 a 59 años'
+       WHEN (CH06 > 60.0) THEN '60 años o más'
+  END AS rangos_edad,
+  SUM(PONDERA) AS cant_pob_total,
+  SUM(CASE WHEN (ESTADO = 1.0) THEN PONDERA ELSE 0 END) AS cant_ocupades,
+  MIN(P21) AS min_ing_ocu_princ,
+  MAX(P21) AS max_ing_ocu_princ,
+  SUM(P21 * PONDERA) / SUM(PONDERA) AS med_ing_ocu_princ
+FROM 
+  b_eph_ind
+WHERE 
+  AGLOMERADO IN (32.0, 33.0)
+GROUP BY 
+  sexo,
+  rangos_edad;
+```

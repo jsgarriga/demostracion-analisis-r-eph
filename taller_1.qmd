@@ -1,0 +1,131 @@
+---
+title: 'Taller I: Uso de R para analizar los datos de la Encuesta Permanente de Hogares (INDEC, Argentina)'
+subtitle: 'Demostración para el Taller introductorio a la Ciencia de Datos con R: Introducción al lenguaje de programación estadístico R'
+author:
+  - name: Jess Garriga
+date: "09/03/2023"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    code-fold: false
+    code-summary: Mostrar código
+    code-tools: true
+    code-link: true
+    self-contained: true
+execute:
+  enabled: true
+---
+
+## Puesta a punto
+
+```{r}
+# Cargamos las librerías y scripts a utilizar
+library(tidyverse)
+library(eph)
+library(questionr)
+
+# Cargamos los microdatos de la EPH para el año 2019, tercer trimestre, encuesta de tipo individual
+b_eph_ind <- get_microdata(year = 2019, trimester = 3, type = "individual")
+```
+
+### Sobre la EPH
+
+El objetivo general de la encuesta es el análisis de la inserción de la población en la estructura económico-social ([reformulación del año 2003](https://www.indec.gob.ar/ftp/cuadros/sociedad/metodologia_eph_continua.pdf)). Dicha inserción puede ser analizada a partir de tres ejes:
+
+- Características demográficas.
+- Inserción en la producción de bienes y servicios.
+- Participación en la distribución del producto social.
+
+Sus fuentes de datos son:
+
+- Censos (Le pregunto a la TODA población sobre sus características)
+- Registros administrativos (La población está registrada en formularios con fines o no estadísticos)
+- Encuestas (No puedo acceder a toda la población, le pregunto sólo a una porción de ella)
+- Dispositivos interconectados (La población "deja" rastros en celulares, internet, operaciones digitales)
+
+![](img/poblacion_muestra.PNG)
+
+![](img/hitos_eph.jpg)
+
+![](img/marco_analitico_coneptual_eph.jpg)
+
+## Taller I: Introducción al lenguaje de programación estadístico R
+
+### Práctica 1.a.1
+
+- Sumar dos o más valores sin utilizar una función
+- Crear un vector numérico que contenga 7 valores
+- Crear un vector de texto que contenga 3 valores
+- Verificar de qué tipo es el valor "67" (comprobar con comillas y sin comillas)
+- Pegar dos o más valores de tipo character (texto), cada uno separado por un espacio en blanco
+
+```{r}
+3 + 5 + 2
+
+c(1:7)
+
+c("awa", "owo", "uwu")
+
+class(67)
+
+class("67")
+
+paste("Es", "un", "perro", sep = " ")
+```
+
+### Práctica 1.a.2
+
+- Crear un vector llamado nombre que contenga 6 valores (6 nombres)
+- Extraer el segundo valor del vector creado y asignarlo a un nuevo objeto
+- Dados los siguientes vectores:
+
+```{r}
+localidad <- c("Jujuy", "Jujuy", "La Pampa", "Córdoba", "Jujuy", "Chubut")
+
+tipo_alojamiento <- c("Casa", "Casa", "Depto", "Depto", "Depto", "Casa")
+```
+
+- Crear un objeto de tipo data.frame (base de datos) que contenga el vector creado (nombre) más los dos propuestos (localidad y tipo_alojamiento)
+- Extraer del data.frame el valor de la tercar fila y segunda columna.
+- Consultar del data.frame sobre los valores de la columna tipo_alojamiento
+
+```{r}
+nombre <- c("María", "Luna", "Gise", "Juan", "Diego", "Milo")
+
+luna <- nombre[2]
+
+base <- data.frame(nombre, localidad, tipo_alojamiento)
+
+base[3,2]
+
+base$tipo_alojamiento
+```
+
+### Práctica 1.b
+
+- Crear una carpeta donde alojar el proyecto de trabajo
+- Crear la estructura de carpetas propuesta
+- En la carpeta entradas incorporar una base de datos, preferentemente que usemos cotidianamente (no importa el formato)
+- Crear un script de trabajo y alojarlo en la carpeta scripts
+- Importar la base de datos y aplicar alguna de las funciones descritas previamente
+
+```{r}
+source("./scripts/1_levantar_datos.R")
+```
+
+### Descripción de los datos
+
+```{r}
+head(base_eph_ind)
+
+# str(base_eph_ind)
+
+# summary(base_eph_ind)
+
+# is.na(base_eph_ind)
+
+# NOTA: el código está comentado ya que cuando se renderiza el documento produce una salida muy larga que resulta innecesaria para la presente demostración. En un trabajo local pueden probar correr el código.
+```
