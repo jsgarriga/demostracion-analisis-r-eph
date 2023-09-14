@@ -35,7 +35,7 @@ b_eph_ind <- get_microdata(year = 2019, trimester = 3, type = "individual")
 
 El objetivo general de la EPH es el análisis de la inserción de la población en la estructura económico-social. 
 
-Sobre las variables utilizadas en los datos:
+Sobre las variables utilizadas en los datos de la EPH, INDEC:
 
 - Condición de actividad = ESTADO
 - Sexo = CH04
